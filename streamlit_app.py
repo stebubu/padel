@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os
+import itertools
 
 # Initialize data
 players = ["Player 1", "Player 2", "Player 3", "Player 4"]
@@ -40,23 +41,39 @@ def edit_player_names():
         st.experimental_rerun()
 
 # Function to enter the results of a tournament
+
+
+
+
+
 def enter_tournament_results():
+    # Get all unique pairs of players
+    all_players = list(st.session_state.rankings_df['Player'])
+    all_pairs = list(itertools.combinations(all_players, 2))  # Generate all combinations of pairs
+    
     with st.form("tournament_results"):
         tournament_results = []
-        for i in range(3):
+        # We are assuming here to use the first three unique pairs for simplicity, adjusting for more matches or specific rules might be needed
+        match_pairs = all_pairs[:3]  # Select the first three pairs for simplicity
+        
+        for i, ((team1_player1, team1_player2)) in enumerate(match_pairs):
             st.write(f"Match {i+1}:")
-            cols = st.columns(2)  # Create two columns for two teams
+            cols = st.columns(2)
             with cols[0]:
                 st.write("Team 1")
-                team1_player1 = st.selectbox("Player 1", st.session_state.rankings_df['Player'], key=f"team1_player1_{i}")
-                team1_player2 = st.selectbox("Player 2", [p for p in st.session_state.rankings_df['Player'] if p != team1_player1], key=f"team1_player2_{i}")
-                score_team1 = st.number_input("Score:", min_value=0, max_value=10, value=6, key=f"score_team1_{i}")
+                st.write(f"{team1_player1} and {team1_player2}")
+                score_team1 = st.number_input("Score Team 1:", min_value=0, max_value=10, value=6, key=f"score_team1_{i}")
+            
+            # Select the next available players not in the current match for Team 2
+            remaining_players = [p for p in all_players if p not in (team1_player1, team1_player2)]
+            team2_player1, team2_player2 = remaining_players  # Only two players left for the second team
             with cols[1]:
                 st.write("Team 2")
-                team2_player1 = st.selectbox("Player 1", [p for p in st.session_state.rankings_df['Player'] if p not in [team1_player1, team1_player2]], key=f"team2_player1_{i}")
-                team2_player2 = st.selectbox("Player 2", [p for p in st.session_state.rankings_df['Player'] if p not in [team1_player1, team1_player2, team2_player1]], key=f"team2_player2_{i}")
-                score_team2 = st.number_input("Score:", min_value=0, max_value=10, value=2, key=f"score_team2_{i}")
+                st.write(f"{team2_player1} and {team2_player2}")
+                score_team2 = st.number_input("Score Team 2:", min_value=0, max_value=10, value=2, key=f"score_team2_{i}")
+            
             tournament_results.append(((team1_player1, team1_player2), (team2_player1, team2_player2), (score_team1, score_team2)))
+        
         submitted = st.form_submit_button("Submit")
         if submitted:
             return tournament_results
