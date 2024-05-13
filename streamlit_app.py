@@ -74,8 +74,6 @@ def record_results(tournament_results):
     rankings_df.to_csv("data.csv", index=False)
 
 
-
-
 # Main app
 st.write("Edit player names:")
 edit_player_names()
