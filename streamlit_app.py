@@ -87,10 +87,11 @@ st.write("Current Rank:")
 st.write(rankings.sort_values("Points", ascending=False))
 
 # Plot the rank
+# Plot the rank
 st.write("Rank over time:")
 fig, ax = plt.subplots()
 for i in range(4):
-    player_points = [rankings.loc[rankings["Player"] == players[i], "Points"].values[0] for _ in range(len(tournaments))]
+    player_points = [rankings_df.loc[rankings_df["Player"] == players[i], "Points"].values[0] for _ in range(len(tournaments))]
     ax.plot(range(len(tournaments)), player_points, label=players[i])
 ax.set_xlabel("Tournament")
 ax.set_ylabel("Points")
