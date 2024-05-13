@@ -7,6 +7,7 @@ import os
 players = ["Player 1", "Player 2", "Player 3", "Player 4"]
 tournaments = []
 rankings = pd.DataFrame({"Player": players, "Points": [0]*4})
+rankings_df = pd.DataFrame({'Player': players, 'Points': [0]*4})
 
 # Load data from file
 if os.path.exists("data.csv"):
