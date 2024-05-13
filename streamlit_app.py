@@ -9,6 +9,18 @@ tournaments = []
 rankings = pd.DataFrame({"Player": players, "Points": [0]*4})
 rankings_df = pd.DataFrame({'Player': players, 'Points': [0]*4})
 
+
+# Initialize session state for storing rankings if it doesn't already exist
+if 'rankings_df' not in st.session_state:
+    st.session_state.rankings_df = pd.DataFrame({'Player': players, 'Points': [0]*4})
+
+
+
+
+# Display the updated rankings table
+st.write("Current Rank:")
+st.dataframe(st.session_state.rankings_df)
+
 # Load data from file
 if os.path.exists("data.csv"):
     rankings = pd.read_csv("data.csv", index_col=0)
@@ -63,16 +75,16 @@ def calculate_rank(tournament_results):
     sorted_players = sorted(players, key=lambda x: (-wins[x], -games_won[x]))
     points_distribution = [10, 6, 4, 2]
     for idx, player in enumerate(sorted_players):
-        rankings_df.loc[rankings_df['Player'] == player, 'Points'] += points_distribution[idx]
+        st.session_state.rankings_df.loc[st.session_state.rankings_df['Player'] == player, 'Points'] += points_distribution[idx]
 
-    rankings_df.sort_values("Points", ascending=False, inplace=True)
+    st.session_state.rankings_df.sort_values("Points", ascending=False, inplace=True)
 
 # Function to record the results and update the rank
 def record_results(tournament_results):
     tournaments.append(tournament_results)
     calculate_rank(tournament_results)
-    rankings_df.to_csv("data.csv", index=False)
-
+    # Save to CSV if needed
+    st.session_state.rankings_df.to_csv("data.csv", index=False)
 
 # Main app
 st.write("Edit player names:")
