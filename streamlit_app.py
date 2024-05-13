@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+from itertools import combinations
 
 # Initial setup: Define the base DataFrame for rankings
 if 'rankings' not in st.session_state:
@@ -32,32 +33,34 @@ def main():
         players = [st.text_input(f"Player {i+1} Name:") for i in range(4)]
         submitted = st.form_submit_button("Register Players and Generate Matches")
         if submitted and all(players):
-            # Generate matches
-            matches = [(players[0], players[1]), (players[2], players[3]), (players[0], players[2])]
+            # Generate all unique match pairings
+            matches = list(combinations(players, 2))
             st.session_state.matches = matches
             st.session_state.results = {match: {} for match in matches}
-            st.success("Matches generated!")
+            st.success("All possible matches generated!")
 
     # Step 2: Collect Match Results
     if 'matches' in st.session_state:
         for match in st.session_state.matches:
             with st.form(f"match_{match[0]}_{match[1]}_results"):
                 st.write(f"Match: {match[0]} vs {match[1]}")
-                win = st.selectbox(f"Winner ({match[0]} vs {match[1]})", options=[match[0], match[1]])
-                game_difference = st.slider(f"Game Difference ({match[0]} vs {match[1]})", min_value=1, max_value=10)
+                games_won = {match[0]: st.number_input(f"Games won by {match[0]}", min_value=0, max_value=12, step=1, key=f"games_{match[0]}"),
+                             match[1]: st.number_input(f"Games won by {match[1]}", min_value=0, max_value=12, step=1, key=f"games_{match[1]}")}
                 result_submitted = st.form_submit_button("Submit Result")
                 if result_submitted:
-                    st.session_state.results[match] = {'winner': win, 'game_difference': game_difference}
-                    st.success(f"Result recorded for {match[0]} vs {match[1]}")
+                    st.session_state.results[match] = games_won
+                    st.success(f"Results recorded for {match[0]} vs {match[1]}")
 
     # Step 3: Update Rankings
     if st.button("Update Rankings"):
-        for match, result in st.session_state.results.items():
-            if result:
-                winner = result['winner']
-                loser = match[0] if match[1] == winner else match[1]
-                update_ranking(winner, 10, 1, 0)  # 10 points for a win, 1 game won, 0 lost
-                update_ranking(loser, 0, 0, 1)   # 0 points for a loss, 0 games won, 1 lost
+        for match, games in st.session_state.results.items():
+            if games:
+                winner = match[0] if games[match[0]] > games[match[1]] else match[1]
+                loser = match[0] if winner == match[1] else match[1]
+                winner_points = 10 if games[winner] > games[loser] else 0
+                loser_points = 0
+                update_ranking(winner, winner_points, games[winner], games[loser])
+                update_ranking(loser, loser_points, games[loser], games[winner])
         st.write("Rankings updated successfully!")
 
     # Step 4: Display Rankings
@@ -66,3 +69,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
