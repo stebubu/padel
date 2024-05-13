@@ -1,23 +1,32 @@
 import streamlit as st
 import pandas as pd
+import os
 
-# Initialize the DataFrame for rankings if it doesn't exist
-if 'rankings' not in st.session_state:
+# Path to the CSV file
+csv_file_path = 'tournament_rankings.csv'
+
+# Initialize or load the DataFrame for rankings from CSV if it exists
+if os.path.exists(csv_file_path):
+    st.session_state.rankings = pd.read_csv(csv_file_path)
+else:
     st.session_state.rankings = pd.DataFrame(columns=['Player', 'Total Points', 'Tournaments', 'Sets Won', 'Games Won', 'Games Lost'])
 
-# Helper function to update games and set wins for both winning and losing teams
+# Function to save rankings to CSV
+def save_rankings_to_csv():
+    st.session_state.rankings.to_csv(csv_file_path, index=False)
+
+# Function to update games and set wins for both winning and losing teams
 def update_games(team_win, games_won_win, games_lost_win, team_lose, games_won_lose, games_lost_lose):
-    # Update the winning team
+    # Update the winning and losing teams
     players_win = team_win.split('/')
+    players_lose = team_lose.split('/')
     for player in players_win:
         update_individual_stats(player, games_won_win, games_lost_win, set_win=1)
-
-    # Update the losing team
-    players_lose = team_lose.split('/')
     for player in players_lose:
         update_individual_stats(player, games_won_lose, games_lost_lose, set_win=0)
 
 def update_individual_stats(player_name, games_won, games_lost, set_win):
+    # Update or add player stats
     if player_name in st.session_state.rankings['Player'].values:
         player_data = st.session_state.rankings[st.session_state.rankings['Player'] == player_name]
         idx = player_data.index[0]
@@ -34,24 +43,21 @@ def update_individual_stats(player_name, games_won, games_lost, set_win):
             'Games Lost': [games_lost]
         })
         st.session_state.rankings = pd.concat([st.session_state.rankings, new_data], ignore_index=True)
+    save_rankings_to_csv()
 
-# Helper function to finalize rankings after a tournament
+# Function to finalize rankings after a tournament
 def finalize_rankings():
+    # Update rankings and sort by total points
     st.session_state.rankings['Game Difference'] = st.session_state.rankings['Games Won'] - st.session_state.rankings['Games Lost']
-    sorted_rankings = st.session_state.rankings.sort_values(['Sets Won', 'Game Difference'], ascending=[False, False])
-    sorted_rankings.reset_index(drop=True, inplace=True)  # Reset index to sort players correctly by rank
-
-    points_distribution = [10, 6, 4, 2]  # Points for 1st, 2nd, 3rd, and 4th
-    for idx in range(len(sorted_rankings)):
-        if idx < len(points_distribution):  # Ensure we don't go out of bounds
-            sorted_rankings.loc[idx, 'Total Points'] += points_distribution[idx]
-            sorted_rankings.loc[idx, 'Tournaments'] += 1  # Increment tournaments count for all participating players
-
-    # Update the main DataFrame
-    st.session_state.rankings = sorted_rankings
-    st.session_state.rankings.drop(columns=['Game Difference'], inplace=True)  # Clean up the DataFrame
-
-    st.experimental_rerun()  # Refresh to show updated data
+    st.session_state.rankings.sort_values(['Total Points', 'Sets Won', 'Game Difference'], ascending=[False, False, False], inplace=True)
+    points_distribution = [10, 6, 4, 2]
+    for idx in range(len(st.session_state.rankings)):
+        if idx < len(points_distribution):
+            st.session_state.rankings.loc[idx, 'Total Points'] += points_distribution[idx]
+            st.session_state.rankings.loc[idx, 'Tournaments'] += 1
+    st.session_state.rankings.drop(columns=['Game Difference'], inplace=True)
+    save_rankings_to_csv()
+    st.experimental_rerun()
 
 def main():
     st.title('Tennis Doubles Tournament Tracker')
@@ -88,9 +94,11 @@ def main():
                     update_games(winner_team, games_won[winner_team], games_won[loser_team], loser_team, games_won[loser_team], games_won[winner_team])
                     st.success(f"Results recorded for {match[0]} vs {match[1]}")
 
-    # Step 3: Update Rankings
     if st.button("Finalize Tournament"):
         finalize_rankings()
+
+    st.write("Current Rankings:")
+    st.table(st.session_state.rankings.sort_values('Total Points', ascending=False))
 
     # Step 4: Display Rankings
     st.write("Current Rankings:")
