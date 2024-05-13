@@ -16,13 +16,13 @@ initial_data = {
     'Ratio Points/Tournaments': [0.0]*4
 }
 
-# Initialize or load data
+# Load or initialize data
 if 'rankings_df' not in st.session_state or not os.path.exists("data.csv"):
     st.session_state.rankings_df = pd.DataFrame(initial_data)
 else:
     st.session_state.rankings_df = pd.read_csv("data.csv")
 
-# Streamlit app title
+# App title
 st.title("Padel Tournament App")
 
 # Function to edit player names
@@ -30,8 +30,9 @@ def edit_player_names():
     st.write("Edit player names:")
     for i in range(len(players)):
         new_name = st.text_input(f"Player {i+1}:", value=st.session_state.rankings_df['Player'][i])
-        if new_name:
+        if new_name and new_name != st.session_state.rankings_df['Player'][i]:
             st.session_state.rankings_df.loc[i, 'Player'] = new_name
+            st.experimental_rerun()
 
 # Function to enter the results of a tournament
 def enter_tournament_results():
@@ -51,9 +52,7 @@ def enter_tournament_results():
             return tournament_results
     return None
 
-
-
-
+# Functions to handle player statistics
 def calculate_rank(tournament_results):
     # Initialize local dictionaries to track the stats
     wins = {player: 0 for player in players}
@@ -62,7 +61,7 @@ def calculate_rank(tournament_results):
     matches_lost = {player: 0 for player in players}
     games_lost = {player: 0 for player in players}
 
-    # Process results to update wins, games won, and games lost
+    # Process results
     for ((team1_player1, team1_player2), (team2_player1, team2_player2), (score_team1, score_team2)) in tournament_results:
         if score_team1 > score_team2:
             update_team_stats(team1_player1, team1_player2, score_team1, score_team2, True, wins, matches_won, games_won, matches_lost, games_lost)
@@ -71,7 +70,6 @@ def calculate_rank(tournament_results):
             update_team_stats(team2_player1, team2_player2, score_team2, score_team1, True, wins, matches_won, games_won, matches_lost, games_lost)
             update_team_stats(team1_player1, team1_player2, score_team1, score_team2, False, wins, matches_won, games_won, matches_lost, games_lost)
 
-    # Apply the computed metrics to the DataFrame
     apply_player_stats(wins, games_won, matches_won, matches_lost, games_lost)
 
 def update_team_stats(player1, player2, games_won_team, games_lost_team, is_winner, wins, matches_won, games_won, matches_lost, games_lost):
@@ -86,20 +84,15 @@ def update_team_stats(player1, player2, games_won_team, games_lost_team, is_winn
         games_lost[player] += games_lost_team
 
 def apply_player_stats(wins, games_won, matches_won, matches_lost, games_lost):
-    df = st.session_state.rankings_df  # Reference to the DataFrame
+    df = st.session_state.rankings_df
     for player in players:
-        # Check if the player is in the DataFrame to avoid KeyErrors
         if player in df['Player'].values:
             player_mask = df['Player'] == player
-            # Update the DataFrame safely by using .loc with the existing mask
-            df.loc[player_mask, 'Matches Won'] = df.loc[player_mask, 'Matches Won'] + matches_won.get(player, 0)
-            df.loc[player_mask, 'Matches Lost'] = df.loc[player_mask, 'Matches Lost'] + matches_lost.get(player, 0)
-            df.loc[player_mask, 'Games Won'] = df.loc[player_mask, 'Games Won'] + games_won.get(player, 0)
-            df.loc[player_mask, 'Games Lost'] = df.loc[player_mask, 'Games Lost'] + games_lost.get(player, 0)
-    
-    # Make sure to assign the modified DataFrame back to the session state if necessary
-    st.session_state.rankings_df = df
-
+            df.loc[player_mask, 'Matches Won'] += matches_won.get(player, 0)
+            df.loc[player_mask, 'Matches Lost'] += matches_lost.get(player, 0)
+            df.loc[player_mask, 'Games Won'] += games_won.get(player, 0)
+            df.loc[player_mask, 'Games Lost'] += games_lost.get(player, 0)
+    df.to_csv("data.csv", index=False)  # Save changes
 
 # Main app
 edit_player_names()
@@ -111,6 +104,17 @@ if tournament_results:
 
 st.write("Current Rank:")
 st.dataframe(st.session_state.rankings_df.sort_values("Points", ascending=False))
+
+# Add functionality to export the DataFrame to CSV
+if st.button('Export Data to CSV'):
+    st.session_state.rankings_df.to_csv('tournament_data_export.csv')
+    st.write('Data exported successfully. Check your files.')
+
+# Add functionality to import data
+uploaded_file = st.file_uploader("Upload your input CSV file", type=["csv"])
+if uploaded_file is not None:
+    st.session_state.rankings_df = pd.read_csv(uploaded_file)
+    st.experimental_rerun()  # Rerun the app to refresh data
 
 
 
