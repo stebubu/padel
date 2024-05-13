@@ -12,13 +12,17 @@ st.title("Padel Tournament App")
 
 # Function to enter the results of a tournament
 def enter_tournament_results():
-    tournament_results = []
-    for i in range(3):
-        st.write(f"Match {i+1}:")
-        winner = st.selectbox("Winner", players)
-        loser = st.selectbox("Loser", [p for p in players if p != winner])
-        tournament_results.append((winner, loser))
-    return tournament_results
+    with st.form("tournament_results"):
+        tournament_results = []
+        for i in range(3):
+            st.write(f"Match {i+1}:")
+            winner = st.selectbox("Winner", players, key=f"winner_{i}")
+            loser = st.selectbox("Loser", [p for p in players if p != winner], key=f"loser_{i}")
+            tournament_results.append((winner, loser))
+        submitted = st.form_submit_button("Submit")
+        if submitted:
+            return tournament_results
+    return None
 
 # Function to calculate the rank
 def calculate_rank(tournament_results):
@@ -41,16 +45,12 @@ def record_results(tournament_results):
 # Main app
 st.write("Enter the results of a new tournament:")
 tournament_results = enter_tournament_results()
-record_results(tournament_results)
+if tournament_results:
+    record_results(tournament_results)
 
 # Display the current rank
 st.write("Current Rank:")
 st.write(rankings.sort_values("Points", ascending=False))
-
-# Option to add another tournament
-if st.button("Add another tournament"):
-    tournament_results = enter_tournament_results()
-    record_results(tournament_results)
 
 # Plot the rank
 st.write("Rank over time:")
