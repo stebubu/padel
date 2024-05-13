@@ -58,17 +58,20 @@ def calculate_rank(tournament_results):
         games_won[team1_player2] += score_team1
         games_won[team2_player1] += score_team2
         games_won[team2_player2] += score_team2
-    rankings = sorted(players, key=lambda x: (-wins[x], -games_won[x]))
-    points = [10, 6, 4, 2]
-    for i, player in enumerate(rankings):
-        idx = rankings.index(player)
-        rankings_df.loc[rankings_df['Player'] == player, 'Points'] += points[i]
+
+    # Sorting players first by wins, then by games won
+    sorted_players = sorted(players, key=lambda x: (-wins[x], -games_won[x]))
+    points_distribution = [10, 6, 4, 2]
+    for idx, player in enumerate(sorted_players):
+        rankings_df.loc[rankings_df['Player'] == player, 'Points'] += points_distribution[idx]
+
+    rankings_df.sort_values("Points", ascending=False, inplace=True)
 
 # Function to record the results and update the rank
 def record_results(tournament_results):
     tournaments.append(tournament_results)
     calculate_rank(tournament_results)
-    rankings.to_csv("data.csv", index=False)
+    rankings_df.to_csv("data.csv", index=False)
 
 # Main app
 st.write("Edit player names:")
