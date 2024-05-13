@@ -57,19 +57,31 @@ def update_individual_stats(player_name, games_won, games_lost, set_win):
         st.session_state.rankings = pd.concat([st.session_state.rankings, new_data], ignore_index=True)
     save_rankings_to_csv()
 
-# Function to finalize rankings after a tournament
 def finalize_rankings():
-    # Update rankings and sort by total points
+    # Calculate game difference for sorting
     st.session_state.rankings['Game Difference'] = st.session_state.rankings['Games Won'] - st.session_state.rankings['Games Lost']
-    st.session_state.rankings.sort_values(['Total Points', 'Sets Won', 'Game Difference'], ascending=[False, False, False], inplace=True)
-    points_distribution = [10, 6, 4, 2]
-    for idx in range(len(st.session_state.rankings)):
-        if idx < len(points_distribution):
-            st.session_state.rankings.loc[idx, 'Total Points'] += points_distribution[idx]
+
+    # Sort rankings by the recent tournament results first
+    st.session_state.rankings.sort_values(['Sets Won', 'Game Difference'], ascending=[False, False], inplace=True)
+
+    # Reset indices to match the new sort order correctly
+    st.session_state.rankings.reset_index(drop=True, inplace=True)
+
+    # Points distribution for the tournament participants
+    points_distribution = [10, 6, 4, 2] + [0] * (len(st.session_state.rankings) - 4)  # Ensure it covers all players, even if more than 4
+
+    # Assign points based on the tournament result
+    for idx, points in enumerate(points_distribution):
+        if idx < len(st.session_state.rankings):
+            st.session_state.rankings.loc[idx, 'Total Points'] += points
             st.session_state.rankings.loc[idx, 'Tournaments'] += 1
+
+    # Remove temporary columns and save to CSV
     st.session_state.rankings.drop(columns=['Game Difference'], inplace=True)
     save_rankings_to_csv()
-    st.experimental_rerun()
+
+    st.experimental_rerun()  # Refresh the app to update the displayed rankings
+
 
 def main():
     st.title('Tennis Doubles Tournament Tracker')
