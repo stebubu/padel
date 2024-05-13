@@ -87,15 +87,14 @@ def update_team_stats(player1, player2, games_won_team, games_lost_team, is_winn
 
 def apply_player_stats(wins, games_won, matches_won, matches_lost, games_lost):
     for player in players:
-        # Safely update DataFrame using loc with condition, avoiding direct increment
+        # Ensure you're correctly referencing the DataFrame and the condition is valid.
         player_mask = st.session_state.rankings_df['Player'] == player
-        if any(player_mask):
-            st.session_state.rankings_df.loc[player_mask, 'Matches Won'] = st.session_state.rankings_df.loc[player_mask, 'Matches Won'] + matches_won[player]
-            st.session_state.rankings_df.loc[player_mask, 'Matches Lost'] = st.session_state.rankings_df.loc[player_mask, 'Matches Lost'] + matches_lost[player]
-            st.session_state.rankings_df.loc[player_mask, 'Games Won'] = st.session_state.rankings_df.loc[player_mask, 'Games Won'] + games_won[player]
-            st.session_state.rankings_df.loc[player_mask, 'Games Lost'] = st.session_state.rankings_df.loc[player_mask, 'Games Lost'] + games_lost[player]
-
-    # Sorting players by total points and updating other statistics like Points and Tournaments Won should be handled here as well
+        if player_mask.any():  # Ensures there's at least one match, avoids empty slice operations.
+            # Safely update DataFrame by explicitly referencing existing indices and columns.
+            st.session_state.rankings_df.loc[player_mask, 'Matches Won'] += matches_won[player]
+            st.session_state.rankings_df.loc[player_mask, 'Matches Lost'] += matches_lost[player]
+            st.session_state.rankings_df.loc[player_mask, 'Games Won'] += games_won[player]
+            st.session_state.rankings_df.loc[player_mask, 'Games Lost'] += games_lost[player]
 
 
 
