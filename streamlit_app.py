@@ -110,9 +110,6 @@ def main():
     st.write("Current Rankings:")
     st.table(st.session_state.rankings.sort_values('Total Points', ascending=False))
 
-    # Step 4: Display Rankings
-    st.write("Current Rankings:")
-    st.table(st.session_state.rankings.sort_values('Total Points', ascending=False))
 
     # Provide download link for Excel file
     get_excel_download_link(st.session_state.rankings)
