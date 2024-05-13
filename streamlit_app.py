@@ -4,157 +4,72 @@ import os
 import itertools
 
 
+import streamlit as st
+import pandas as pd
 
-# Initialize data
-players = ["Player 1", "Player 2", "Player 3", "Player 4"]
-initial_data = {
-    'Player': players,
-    'Points': [0]*4,
-    'Tournaments Played': [0]*4,
-    'Tournaments Won': [0]*4,
-    'Matches Won': [0]*4,
-    'Matches Lost': [0]*4,
-    'Games Won': [0]*4,
-    'Games Lost': [0]*4,
-    'Ratio Points/Tournaments': [0.0]*4
-}
+# Initial setup: Define the base DataFrame for rankings
+if 'rankings' not in st.session_state:
+    st.session_state.rankings = pd.DataFrame(columns=['Player', 'Total Points', 'Tournaments', 'Games Won', 'Games Lost'])
 
-# Load or initialize data
-if 'rankings_df' not in st.session_state or not os.path.exists("data.csv"):
-    st.session_state.rankings_df = pd.DataFrame(initial_data)
-else:
-    st.session_state.rankings_df = pd.read_csv("data.csv")
+# Helper function to update ranking
+def update_ranking(player_name, points, games_won, games_lost):
+    if player_name in st.session_state.rankings['Player'].values:
+        player_data = st.session_state.rankings[st.session_state.rankings['Player'] == player_name]
+        idx = player_data.index[0]
+        st.session_state.rankings.loc[idx, 'Total Points'] += points
+        st.session_state.rankings.loc[idx, 'Tournaments'] += 1
+        st.session_state.rankings.loc[idx, 'Games Won'] += games_won
+        st.session_state.rankings.loc[idx, 'Games Lost'] += games_lost
+    else:
+        new_data = pd.DataFrame({
+            'Player': [player_name],
+            'Total Points': [points],
+            'Tournaments': [1],
+            'Games Won': [games_won],
+            'Games Lost': [games_lost]
+        })
+        st.session_state.rankings = pd.concat([st.session_state.rankings, new_data], ignore_index=True)
 
-# App title
-st.title("Padel Tournament App")
+def main():
+    st.title('Tournament Tracker')
 
-# Function to edit player names
-def edit_player_names():
-    st.write("Edit player names:")
-    name_changed = False
-    for i in range(len(players)):
-        new_name = st.text_input(f"Player {i+1}:", value=st.session_state.rankings_df['Player'][i])
-        if new_name and new_name != st.session_state.rankings_df['Player'][i]:
-            st.session_state.rankings_df.loc[i, 'Player'] = new_name
-            name_changed = True
+    # Step 1: Register Players
+    with st.form("player_registration"):
+        players = [st.text_input(f"Player {i+1} Name:") for i in range(4)]
+        submitted = st.form_submit_button("Register Players and Generate Matches")
+        if submitted and all(players):
+            # Generate matches
+            matches = [(players[0], players[1]), (players[2], players[3]), (players[0], players[2])]
+            st.session_state.matches = matches
+            st.session_state.results = {match: {} for match in matches}
+            st.success("Matches generated!")
 
-    if name_changed:
-        st.session_state.rankings_df.to_csv("data.csv", index=False)  # Save immediately after changes
-        st.experimental_rerun()
+    # Step 2: Collect Match Results
+    if 'matches' in st.session_state:
+        for match in st.session_state.matches:
+            with st.form(f"match_{match[0]}_{match[1]}_results"):
+                st.write(f"Match: {match[0]} vs {match[1]}")
+                win = st.selectbox(f"Winner ({match[0]} vs {match[1]})", options=[match[0], match[1]])
+                game_difference = st.slider(f"Game Difference ({match[0]} vs {match[1]})", min_value=1, max_value=10)
+                result_submitted = st.form_submit_button("Submit Result")
+                if result_submitted:
+                    st.session_state.results[match] = {'winner': win, 'game_difference': game_difference}
+                    st.success(f"Result recorded for {match[0]} vs {match[1]}")
 
-# Function to enter the results of a tournament
+    # Step 3: Update Rankings
+    if st.button("Update Rankings"):
+        for match, result in st.session_state.results.items():
+            if result:
+                winner = result['winner']
+                loser = match[0] if match[1] == winner else match[1]
+                update_ranking(winner, 10, 1, 0)  # 10 points for a win, 1 game won, 0 lost
+                update_ranking(loser, 0, 0, 1)   # 0 points for a loss, 0 games won, 1 lost
+        st.write("Rankings updated successfully!")
 
+    # Step 4: Display Rankings
+    st.write("Current Rankings:")
+    st.table(st.session_state.rankings.sort_values('Total Points', ascending=False))
 
-
-
-
-def enter_tournament_results():
-    # Get all unique pairs of players
-    all_players = list(st.session_state.rankings_df['Player'])
-    all_pairs = list(itertools.combinations(all_players, 2))  # Generate all combinations of pairs
-    
-    with st.form("tournament_results"):
-        tournament_results = []
-        # We are assuming here to use the first three unique pairs for simplicity, adjusting for more matches or specific rules might be needed
-        match_pairs = all_pairs[:3]  # Select the first three pairs for simplicity
-        
-        for i, ((team1_player1, team1_player2)) in enumerate(match_pairs):
-            st.write(f"Match {i+1}:")
-            cols = st.columns(2)
-            with cols[0]:
-                st.write("Team 1")
-                st.write(f"{team1_player1} and {team1_player2}")
-                score_team1 = st.number_input("Score Team 1:", min_value=0, max_value=10, value=6, key=f"score_team1_{i}")
-            
-            # Select the next available players not in the current match for Team 2
-            remaining_players = [p for p in all_players if p not in (team1_player1, team1_player2)]
-            team2_player1, team2_player2 = remaining_players  # Only two players left for the second team
-            with cols[1]:
-                st.write("Team 2")
-                st.write(f"{team2_player1} and {team2_player2}")
-                score_team2 = st.number_input("Score Team 2:", min_value=0, max_value=10, value=2, key=f"score_team2_{i}")
-            
-            tournament_results.append(((team1_player1, team1_player2), (team2_player1, team2_player2), (score_team1, score_team2)))
-        
-        submitted = st.form_submit_button("Submit")
-        if submitted:
-            return tournament_results
-    return None
-
-# Functions to handle player statistics
-def calculate_rank(tournament_results):
-    # Get all players from the DataFrame to ensure all are included.
-    players = st.session_state.rankings_df['Player'].tolist()
-    
-    # Initialize local dictionaries to track the stats
-    wins = {player: 0 for player in players}
-    games_won = {player: 0 for player in players}
-    matches_won = {player: 0 for player in players}
-    matches_lost = {player: 0 for player in players}
-    games_lost = {player: 0 for player in players}
-
-    # Process results
-    for ((team1_player1, team1_player2), (team2_player1, team2_player2), (score_team1, score_team2)) in tournament_results:
-        if score_team1 > score_team2:
-            update_team_stats(team1_player1, team1_player2, score_team1, score_team2, True, wins, matches_won, games_won, matches_lost, games_lost)
-            update_team_stats(team2_player1, team2_player2, score_team2, score_team1, False, wins, matches_won, games_won, matches_lost, games_lost)
-        else:
-            update_team_stats(team2_player1, team2_player2, score_team2, score_team1, True, wins, matches_won, games_won, matches_lost, games_lost)
-            update_team_stats(team1_player1, team1_player2, score_team1, score_team2, False, wins, matches_won, games_won, matches_lost, games_lost)
-
-    apply_player_stats(wins, games_won, matches_won, matches_lost, games_lost)
-
-
-
-
-def update_team_stats(player1, player2, games_won_team, games_lost_team, is_winner, wins, matches_won, games_won, matches_lost, games_lost):
-    team_players = [player1, player2]
-    for player in team_players:
-        if player not in wins:
-            raise ValueError(f"Missing player in stats dictionary: {player}")
-        if is_winner:
-            wins[player] += 1
-            matches_won[player] += 1
-        else:
-            matches_lost[player] += 1
-        games_won[player] += games_won_team
-        games_lost[player] += games_lost_team
-
-def apply_player_stats(wins, games_won, matches_won, matches_lost, games_lost):
-    df = st.session_state.rankings_df
-    for player in players:
-        if player in df['Player'].values:  # Check if player exists in DataFrame
-            player_mask = df['Player'] == player
-            if player_mask.any():  # Check if there are any rows matching the player
-                # Use the get method with a default of 0 for safety
-                df.loc[player_mask, 'Matches Won'] += matches_won.get(player, 0)
-                df.loc[player_mask, 'Matches Lost'] += matches_lost.get(player, 0)
-                df.loc[player_mask, 'Games Won'] += games_won.get(player, 0)
-                df.loc[player_mask, 'Games Lost'] += games_lost.get(player, 0)
-    df.to_csv("data.csv", index=False)  # Persist changes to file
-
-# Main app
-edit_player_names()
-
-st.write("Enter the results of a new tournament:")
-tournament_results = enter_tournament_results()
-if tournament_results:
-    calculate_rank(tournament_results)
-
-st.write("Current Rank:")
-st.dataframe(st.session_state.rankings_df.sort_values("Points", ascending=False))
-
-# Add functionality to export the DataFrame to CSV
-if st.button('Export Data to CSV'):
-    st.session_state.rankings_df.to_csv('tournament_data_export.csv')
-    st.write('Data exported successfully. Check your files.')
-
-# Add functionality to import data
-uploaded_file = st.file_uploader("Upload your input CSV file", type=["csv"])
-if uploaded_file is not None:
-    st.session_state.rankings_df = pd.read_csv(uploaded_file)
-    st.experimental_rerun()  # Rerun the app to refresh data
-
-
+if __name__ == "__main
 
 
