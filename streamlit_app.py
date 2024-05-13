@@ -69,29 +69,35 @@ def update_individual_stats(player_name, games_won, games_lost, set_win):
     save_rankings_to_csv()
 
 def finalize_rankings():
-    # Calculate game difference for sorting
+    # Calculate game difference for sorting and resolving ties
     st.session_state.rankings['Game Difference'] = st.session_state.rankings['Games Won'] - st.session_state.rankings['Games Lost']
-
-    # Sort rankings by the recent tournament results first
     st.session_state.rankings.sort_values(['Sets Won', 'Game Difference'], ascending=[False, False], inplace=True)
 
-    # Reset indices to match the new sort order correctly
-    st.session_state.rankings.reset_index(drop=True, inplace=True)
+    # Prepare to assign points
+    points_distribution = [10, 6, 4, 2] + [0] * (len(st.session_state.rankings) - 4)
+    rankings = st.session_state.rankings.reset_index(drop=True)
 
-    # Points distribution for the tournament participants
-    points_distribution = [10, 6, 4, 2] + [0] * (len(st.session_state.rankings) - 4)  # Ensure it covers all players, even if more than 4
+    # Handle ties and assign points
+    current_points = points_distribution[0]
+    skip_count = 0  # Tracks how many indices to skip due to ties
 
-    # Assign points based on the tournament result
-    for idx, points in enumerate(points_distribution):
-        if idx < len(st.session_state.rankings):
-            st.session_state.rankings.loc[idx, 'Total Points'] += points
-            st.session_state.rankings.loc[idx, 'Tournaments'] += 1
+    for i in range(len(rankings)):
+        if i > 0 and (rankings.at[i, 'Sets Won'] == rankings.at[i-1, 'Sets Won'] and
+                      rankings.at[i, 'Game Difference'] == rankings.at[i-1, 'Game Difference']):
+            rankings.at[i, 'Total Points'] += current_points
+            skip_count += 1
+        else:
+            if skip_count > 0:  # Adjust the index if there were ties
+                current_points = points_distribution[i-skip_count] if i-skip_count < len(points_distribution) else 0
+            rankings.at[i, 'Total Points'] += current_points
+            current_points = points_distribution[i+1] if i+1 < len(points_distribution) else 0
 
-    # Remove temporary columns and save to CSV
-    st.session_state.rankings.drop(columns=['Game Difference'], inplace=True)
+        rankings.at[i, 'Tournaments'] += 1
+
+    # Update the main DataFrame
+    st.session_state.rankings = rankings
     save_rankings_to_csv()
-
-    st.experimental_rerun()  # Refresh the app to update the displayed rankings
+    st.experimental_rerun()
 
 
 def main():
