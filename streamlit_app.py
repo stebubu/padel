@@ -103,11 +103,13 @@ def calculate_rank(tournament_results):
     apply_player_stats(wins, games_won, matches_won, matches_lost, games_lost)
 
 
+
+
 def update_team_stats(player1, player2, games_won_team, games_lost_team, is_winner, wins, matches_won, games_won, matches_lost, games_lost):
     team_players = [player1, player2]
     for player in team_players:
         if player not in wins:
-            st.error(f"Missing player in stats dictionary: {player}")  # This will display an error in the app
+            raise ValueError(f"Missing player in stats dictionary: {player}")
         if is_winner:
             wins[player] += 1
             matches_won[player] += 1
