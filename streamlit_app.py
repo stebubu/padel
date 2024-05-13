@@ -55,8 +55,11 @@ st.write(rankings.sort_values("Points", ascending=False))
 # Plot the rank
 st.write("Rank over time:")
 fig, ax = plt.subplots()
-ax.plot(range(len(tournaments)), [rankings.loc[i, "Points"] for i in range(4)])
+for i in range(4):
+    player_points = [rankings.loc[rankings["Player"] == players[i], "Points"].values[0] for _ in range(len(tournaments))]
+    ax.plot(range(len(tournaments)), player_points, label=players[i])
 ax.set_xlabel("Tournament")
 ax.set_ylabel("Points")
 ax.set_title("Rank over time")
+ax.legend()
 st.pyplot(fig)
