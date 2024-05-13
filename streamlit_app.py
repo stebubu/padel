@@ -101,7 +101,7 @@ def calculate_rank(tournament_results):
             update_team_stats(team1_player1, team1_player2, score_team1, score_team2, False, wins, matches_won, games_won, matches_lost, games_lost)
 
     apply_player_stats(wins, games_won, matches_won, matches_lost, games_lost)
-)
+
 
 def update_team_stats(player1, player2, games_won_team, games_lost_team, is_winner, wins, matches_won, games_won, matches_lost, games_lost):
     team_players = [player1, player2]
