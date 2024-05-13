@@ -3,18 +3,22 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 
-# Initialize the data
+
 players = ["Player 1", "Player 2", "Player 3", "Player 4"]
-tournaments = []
-rankings = pd.DataFrame({"Player": players, "Points": [0]*4})
-rankings_df = pd.DataFrame({'Player': players, 'Points': [0]*4})
+initial_data = {
+    'Player': players,
+    'Points': [0]*4,
+    'Tournaments Played': [0]*4,
+    'Tournaments Won': [0]*4,
+    'Matches Won': [0]*4,
+    'Matches Lost': [0]*4,
+    'Games Won': [0]*4,
+    'Games Lost': [0]*4,
+    'Ratio Points/Tournaments': [0.0]*4
+}
 
-
-# Initialize session state for storing rankings if it doesn't already exist
 if 'rankings_df' not in st.session_state:
-    st.session_state.rankings_df = pd.DataFrame({'Player': players, 'Points': [0]*4})
-
-
+    st.session_state.rankings_df = pd.DataFrame(initial_data)
 
 
 
@@ -52,7 +56,57 @@ def enter_tournament_results():
             return tournament_results
     return None
 
-# Function to calculate the rank
+
+def record_results(tournament_results):
+    # Increment tournament played count for all players
+    st.session_state.rankings_df['Tournaments Played'] += 1
+
+    # Process each tournament result
+    for result in tournament_results:
+        ((team1_player1, team1_player2), (team2_player1, team2_player2), (score_team1, score_team2)) = result
+        
+        # Update matches and games statistics
+        if score_team1 > score_team2:
+            # Team 1 Wins
+            for player in [team1_player1, team1_player2]:
+                st.session_state.rankings_df.loc[st.session_state.rankings_df['Player'] == player, 'Matches Won'] += 1
+                st.session_state.rankings_df.loc[st.session_state.rankings_df['Player'] == player, 'Games Won'] += score_team1
+                st.session_state.rankings_df.loc[st.session_state.rankings_df['Player'] == player, 'Games Lost'] += score_team2
+            # Team 2 Loses
+            for player in [team2_player1, team2_player2]:
+                st.session_state.rankings_df.loc[st.session_state.rankings_df['Player'] == player, 'Matches Lost'] += 1
+                st.session_state.rankings_df.loc[st.session_state.rankings_df['Player'] == player, 'Games Won'] += score_team2
+                st.session_state.rankings_df.loc[st.session_state.rankings_df['Player'] == player, 'Games Lost'] += score_team1
+        else:
+            # Similar logic for team 2 winning
+
+    # Calculate points and update ranks, tournaments won etc.
+    calculate_rank(tournament_results)
+
+def calculate_rank(tournament_results):
+    # Current logic for updating Points and determining who won the tournament
+    # Now also calculate 'Ratio Points/Tournaments'
+    for player in players:
+        row = st.session_state.rankings_df[st.session_state.rankings_df['Player'] == player]
+        if row['Tournaments Played'].item() > 0:
+            ratio = row['Points'].item() / row['Tournaments Played'].item()
+            st.session_state.rankings_df.loc[st.session_state.rankings_df['Player'] == player, 'Ratio Points/Tournaments'] = ratio
+
+    # Update CSV and rankings view after changes
+    st.session_state.rankings_df.to_csv("data.csv", index=False)
+
+
+
+
+
+
+
+
+
+
+
+
+'''# Function to calculate the rank
 def calculate_rank(tournament_results):
     wins = {player: 0 for player in players}
     games_won = {player: 0 for player in players}
@@ -81,7 +135,7 @@ def record_results(tournament_results):
     tournaments.append(tournament_results)
     calculate_rank(tournament_results)
     # Save to CSV if needed
-    st.session_state.rankings_df.to_csv("data.csv", index=False)
+    st.session_state.rankings_df.to_csv("data.csv", index=False)'''
 
 # Main app
 st.write("Edit player names:")
@@ -94,8 +148,12 @@ if tournament_results:
 
 # Display the current rank
 
-# Display the updated rankings table
+st.write("Current Rank:")
+st.dataframe(st.session_state.rankings_df.sort_values("Points", ascending=False))
+
+
+'''# Display the updated rankings table
 st.write("Current Rank:")
 st.dataframe(st.session_state.rankings_df)
-
+'''
 
