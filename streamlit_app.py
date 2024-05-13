@@ -57,31 +57,66 @@ def enter_tournament_results():
     return None
 
 
-def record_results(tournament_results):
-    # Increment tournament played count for all players
-    st.session_state.rankings_df['Tournaments Played'] += 1
-
-    # Process each tournament result
-    for result in tournament_results:
-        ((team1_player1, team1_player2), (team2_player1, team2_player2), (score_team1, score_team2)) = result
-        
-        # Update matches and games statistics
+def calculate_rank(tournament_results):
+    # Initialize or reset local counters
+    wins = {player: 0 for player in players}
+    games_won = {player: 0 for player in players}
+    matches_won = {player: 0 for player in players}
+    matches_lost = {player: 0 for player in players}
+    games_lost = {player: 0 for player in players}
+    
+    # Process results to update wins, games won, and games lost
+    for ((team1_player1, team1_player2), (team2_player1, team2_player2), (score_team1, score_team2)) in tournament_results:
         if score_team1 > score_team2:
-            # Team 1 Wins
+            # Update wins and games for team 1
             for player in [team1_player1, team1_player2]:
-                st.session_state.rankings_df.loc[st.session_state.rankings_df['Player'] == player, 'Matches Won'] += 1
-                st.session_state.rankings_df.loc[st.session_state.rankings_df['Player'] == player, 'Games Won'] += score_team1
-                st.session_state.rankings_df.loc[st.session_state.rankings_df['Player'] == player, 'Games Lost'] += score_team2
-            # Team 2 Loses
+                wins[player] += 1
+                matches_won[player] += 1
+                games_won[player] += score_team1
+                games_lost[player] += score_team2
+            # Update games for team 2
             for player in [team2_player1, team2_player2]:
-                st.session_state.rankings_df.loc[st.session_state.rankings_df['Player'] == player, 'Matches Lost'] += 1
-                st.session_state.rankings_df.loc[st.session_state.rankings_df['Player'] == player, 'Games Won'] += score_team2
-                st.session_state.rankings_df.loc[st.session_state.rankings_df['Player'] == player, 'Games Lost'] += score_team1
+                matches_lost[player] += 1
+                games_won[player] += score_team2
+                games_lost[player] += score_team1
         else:
-            # Similar logic for team 2 winning
+            # Update wins and games for team 2
+            for player in [team2_player1, team2_player2]:
+                wins[player] += 1
+                matches_won[player] += 1
+                games_won[player] += score_team2
+                games_lost[player] += score_team1
+            # Update games for team 1
+            for player in [team1_player1, team1_player2]:
+                matches_lost[player] += 1
+                games_won[player] += score_team1
+                games_lost[player] += score_team2
 
-    # Calculate points and update ranks, tournaments won etc.
-    calculate_rank(tournament_results)
+    # Sorting players first by wins, then by games won
+    sorted_players = sorted(players, key=lambda x: (-wins[x], -games_won[x]))
+    points_distribution = [10, 6, 4, 2]
+    
+    # Update the global DataFrame with computed metrics
+    for idx, player in enumerate(sorted_players):
+        df = st.session_state.rankings_df
+        df.loc[df['Player'] == player, 'Points'] += points_distribution[idx]
+        df.loc[df['Player'] == player, 'Matches Won'] += matches_won[player]
+        df.loc[df['Player'] == player, 'Matches Lost'] += matches_lost[player]
+        df.loc[df['Player'] == player, 'Games Won'] += games_won[player]
+        df.loc[df['Player'] == player, 'Games Lost'] += games_lost[player]
+    
+    # Updating number of tournaments played and won, this should be done outside of this function ideally
+    # However, if we assume only one winner, the top player in sorted_players won this tournament
+    df.loc[df['Player'] == sorted_players[0], 'Tournaments Won'] += 1
+    df['Tournaments Played'] += 1  # Increment for all players participating
+
+    # Calculate ratio of total points to tournaments played
+    df['Ratio Points/Tournaments'] = df['Points'] / df['Tournaments Played']
+
+    st.session_state.rankings_df = df.sort_values("Points", ascending=False)
+
+
+ 
 
 def calculate_rank(tournament_results):
     # Current logic for updating Points and determining who won the tournament
@@ -95,47 +130,6 @@ def calculate_rank(tournament_results):
     # Update CSV and rankings view after changes
     st.session_state.rankings_df.to_csv("data.csv", index=False)
 
-
-
-
-
-
-
-
-
-
-
-
-'''# Function to calculate the rank
-def calculate_rank(tournament_results):
-    wins = {player: 0 for player in players}
-    games_won = {player: 0 for player in players}
-    for ((team1_player1, team1_player2), (team2_player1, team2_player2), (score_team1, score_team2)) in tournament_results:
-        if score_team1 > score_team2:
-            wins[team1_player1] += 1
-            wins[team1_player2] += 1
-        else:
-            wins[team2_player1] += 1
-            wins[team2_player2] += 1
-        games_won[team1_player1] += score_team1
-        games_won[team1_player2] += score_team1
-        games_won[team2_player1] += score_team2
-        games_won[team2_player2] += score_team2
-
-    # Sorting players first by wins, then by games won
-    sorted_players = sorted(players, key=lambda x: (-wins[x], -games_won[x]))
-    points_distribution = [10, 6, 4, 2]
-    for idx, player in enumerate(sorted_players):
-        st.session_state.rankings_df.loc[st.session_state.rankings_df['Player'] == player, 'Points'] += points_distribution[idx]
-
-    st.session_state.rankings_df.sort_values("Points", ascending=False, inplace=True)
-
-# Function to record the results and update the rank
-def record_results(tournament_results):
-    tournaments.append(tournament_results)
-    calculate_rank(tournament_results)
-    # Save to CSV if needed
-    st.session_state.rankings_df.to_csv("data.csv", index=False)'''
 
 # Main app
 st.write("Edit player names:")
@@ -151,9 +145,4 @@ if tournament_results:
 st.write("Current Rank:")
 st.dataframe(st.session_state.rankings_df.sort_values("Points", ascending=False))
 
-
-'''# Display the updated rankings table
-st.write("Current Rank:")
-st.dataframe(st.session_state.rankings_df)
-'''
 
