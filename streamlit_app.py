@@ -5,30 +5,38 @@ import pandas as pd
 if 'rankings' not in st.session_state:
     st.session_state.rankings = pd.DataFrame(columns=['Player', 'Total Points', 'Tournaments', 'Sets Won', 'Games Won', 'Games Lost'])
 
-# Helper function to update games and set wins
-def update_games(team, games_won, games_lost):
-    players = team.split('/')
-    for player in players:
-        if player in st.session_state.rankings['Player'].values:
-            player_data = st.session_state.rankings[st.session_state.rankings['Player'] == player]
-            idx = player_data.index[0]
-            st.session_state.rankings.loc[idx, 'Games Won'] += games_won
-            st.session_state.rankings.loc[idx, 'Games Lost'] += games_lost
-            st.session_state.rankings.loc[idx, 'Sets Won'] += 1  # Increment set wins
-        else:
-            new_data = pd.DataFrame({
-                'Player': [player],
-                'Total Points': [0],
-                'Tournaments': [0],
-                'Sets Won': [1],  # Initial set win
-                'Games Won': [games_won],
-                'Games Lost': [games_lost]
-            })
-            st.session_state.rankings = pd.concat([st.session_state.rankings, new_data], ignore_index=True)
+# Helper function to update games and set wins for both winning and losing teams
+def update_games(team_win, games_won_win, games_lost_win, team_lose, games_won_lose, games_lost_lose):
+    # Update the winning team
+    players_win = team_win.split('/')
+    for player in players_win:
+        update_individual_stats(player, games_won_win, games_lost_win, set_win=1)
+
+    # Update the losing team
+    players_lose = team_lose.split('/')
+    for player in players_lose:
+        update_individual_stats(player, games_won_lose, games_lost_lose, set_win=0)
+
+def update_individual_stats(player_name, games_won, games_lost, set_win):
+    if player_name in st.session_state.rankings['Player'].values:
+        player_data = st.session_state.rankings[st.session_state.rankings['Player'] == player_name]
+        idx = player_data.index[0]
+        st.session_state.rankings.loc[idx, 'Games Won'] += games_won
+        st.session_state.rankings.loc[idx, 'Games Lost'] += games_lost
+        st.session_state.rankings.loc[idx, 'Sets Won'] += set_win
+    else:
+        new_data = pd.DataFrame({
+            'Player': [player_name],
+            'Total Points': [0],
+            'Tournaments': [0],
+            'Sets Won': [set_win],
+            'Games Won': [games_won],
+            'Games Lost': [games_lost]
+        })
+        st.session_state.rankings = pd.concat([st.session_state.rankings, new_data], ignore_index=True)
 
 # Helper function to finalize rankings after a tournament
 def finalize_rankings():
-    # Sorting by Sets Won and then by game difference
     st.session_state.rankings['Game Difference'] = st.session_state.rankings['Games Won'] - st.session_state.rankings['Games Lost']
     st.session_state.rankings.sort_values(['Sets Won', 'Game Difference'], ascending=[False, False], inplace=True)
     points_distribution = [10, 6, 4, 2]  # Points for 1st, 2nd, 3rd, and 4th
@@ -36,6 +44,7 @@ def finalize_rankings():
         st.session_state.rankings.loc[idx, 'Total Points'] += points
         st.session_state.rankings.loc[idx, 'Tournaments'] += 1
     st.session_state.rankings.drop(columns=['Game Difference'], inplace=True)
+    st.experimental_rerun()
 
 def main():
     st.title('Tennis Doubles Tournament Tracker')
@@ -69,13 +78,12 @@ def main():
                     st.session_state.results[match] = games_won
                     winner_team = match[0] if games_won[match[0]] > games_won[match[1]] else match[1]
                     loser_team = match[1] if winner_team == match[0] else match[0]
-                    update_games(winner_team, games_won[winner_team], games_won[loser_team])
+                    update_games(winner_team, games_won[winner_team], games_won[loser_team], loser_team, games_won[loser_team], games_won[winner_team])
                     st.success(f"Results recorded for {match[0]} vs {match[1]}")
 
     # Step 3: Update Rankings
     if st.button("Finalize Tournament"):
         finalize_rankings()
-        st.write("Rankings updated successfully!")
 
     # Step 4: Display Rankings
     st.write("Current Rankings:")
@@ -83,4 +91,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
