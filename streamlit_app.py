@@ -95,7 +95,7 @@ def finalize_rankings():
 
 
 def main():
-    st.title('Tennis Doubles Tournament Tracker')
+    st.title('CIRCOLO PADEL RIMINI - MERCOLEDI DA LEONI')
 
     # Step 1: Register Players
     with st.form("player_registration"):
@@ -129,7 +129,7 @@ def main():
                     update_games(winner_team, games_won[winner_team], games_won[loser_team], loser_team, games_won[loser_team], games_won[winner_team])
                     st.success(f"Results recorded for {match[0]} vs {match[1]}")
 
-    if st.button("Finalize Tournament"):
+    if st.button("AGGIORNA TAPPA"):
         finalize_rankings()
 
     st.write("Current Rankings:")
