@@ -17,9 +17,6 @@ if 'rankings_df' not in st.session_state:
 
 
 
-# Display the updated rankings table
-st.write("Current Rank:")
-st.dataframe(st.session_state.rankings_df)
 
 # Load data from file
 if os.path.exists("data.csv"):
@@ -96,7 +93,9 @@ if tournament_results:
     record_results(tournament_results)
 
 # Display the current rank
+
+# Display the updated rankings table
 st.write("Current Rank:")
-# Ensure the DataFrame is sorted by 'Points' in descending order before displaying
-rankings_df.sort_values('Points', ascending=False, inplace=True)
-st.dataframe(rankings_df)  # or st.table(rankings_df)
+st.dataframe(st.session_state.rankings_df)
+
+
