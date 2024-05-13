@@ -16,15 +16,15 @@ else:
 def save_rankings_to_csv():
     st.session_state.rankings.to_csv(csv_file_path, index=False)
 
-# Function to export rankings to Excel and provide a download link
 def get_excel_download_link(df):
-    """Generates a download link allowing the data in a given panda dataframe to be downloaded as an excel file."""
-    towrite = BytesIO()
-    df.to_excel(towrite, index=False, engine='xlsxwriter')  # write to BytesIO buffer
-    towrite.seek(0)  # move to the beginning of the stream
-    link = st.download_button(label="Download Excel file", data=towrite, file_name='tournament_rankings.xlsx', mime="application/vnd.ms-excel")
-    return link
-
+    """Generates a download link allowing the data in a given panda dataframe to be downloaded as an Excel file."""
+    towrite = BytesIO()  # create a BytesIO object
+    # Write DataFrame to an Excel buffer
+    with pd.ExcelWriter(towrite, engine='xlsxwriter') as writer:
+        df.to_excel(writer, index=False)
+    towrite.seek(0)  # Rewind the buffer
+    # Create a download button and return it
+    return st.download_button(label="Download Excel file", data=towrite.read(), file_name='tournament_rankings.xlsx', mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 # Function to update games and set wins for both winning and losing teams
 def update_games(team_win, games_won_win, games_lost_win, team_lose, games_won_lose, games_lost_lose):
