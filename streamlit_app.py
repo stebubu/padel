@@ -17,6 +17,17 @@ else:
 def save_rankings_to_csv():
     st.session_state.rankings.to_csv(csv_file_path, index=False)
 
+# Function to reset the rankings
+def reset_rankings():
+    # Clear the DataFrame
+    st.session_state.rankings = pd.DataFrame(columns=['Player', 'Total Points', 'Tournaments', 'Sets Won', 'Games Won', 'Games Lost'])
+    # Optionally, delete the CSV file
+    if os.path.exists(csv_file_path):
+        os.remove(csv_file_path)
+    st.success("Rankings have been reset.")
+    st.experimental_rerun()  # Refresh the app to update the display
+
+
 def get_excel_download_link(df):
     """Generates a download link allowing the data in a given panda dataframe to be downloaded as an Excel file."""
     towrite = BytesIO()  # create a BytesIO object
@@ -127,6 +138,10 @@ def main():
 
     # Provide download link for Excel file
     get_excel_download_link(st.session_state.rankings)
+
+    # Placement for the reset button
+    if st.button('Reset Rankings'):
+        reset_rankings()
 
 
 if __name__ == "__main__":
