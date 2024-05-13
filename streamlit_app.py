@@ -60,7 +60,8 @@ def calculate_rank(tournament_results):
     rankings = sorted(players, key=lambda x: (-wins[x], -games_won[x]))
     points = [10, 6, 4, 2]
     for i, player in enumerate(rankings):
-        rankings.loc[rankings["Player"] == player, "Points"] += points[i]
+        idx = rankings.index[rankings['Player'] == player].tolist()[0]
+        rankings.loc[idx, 'Points'] += points[i]
 
 # Function to record the results and update the rank
 def record_results(tournament_results):
