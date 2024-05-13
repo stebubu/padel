@@ -86,13 +86,15 @@ def update_team_stats(player1, player2, games_won_team, games_lost_team, is_winn
 def apply_player_stats(wins, games_won, matches_won, matches_lost, games_lost):
     df = st.session_state.rankings_df
     for player in players:
-        if player in df['Player'].values:
+        if player in df['Player'].values:  # Check if player exists in DataFrame
             player_mask = df['Player'] == player
-            df.loc[player_mask, 'Matches Won'] += matches_won.get(player, 0)
-            df.loc[player_mask, 'Matches Lost'] += matches_lost.get(player, 0)
-            df.loc[player_mask, 'Games Won'] += games_won.get(player, 0)
-            df.loc[player_mask, 'Games Lost'] += games_lost.get(player, 0)
-    df.to_csv("data.csv", index=False)  # Save changes
+            if player_mask.any():  # Check if there are any rows matching the player
+                # Use the get method with a default of 0 for safety
+                df.loc[player_mask, 'Matches Won'] += matches_won.get(player, 0)
+                df.loc[player_mask, 'Matches Lost'] += matches_lost.get(player, 0)
+                df.loc[player_mask, 'Games Won'] += games_won.get(player, 0)
+                df.loc[player_mask, 'Games Lost'] += games_lost.get(player, 0)
+    df.to_csv("data.csv", index=False)  # Persist changes to file
 
 # Main app
 edit_player_names()
