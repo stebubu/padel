@@ -73,31 +73,41 @@ def finalize_rankings():
     st.session_state.rankings['Game Difference'] = st.session_state.rankings['Games Won'] - st.session_state.rankings['Games Lost']
     st.session_state.rankings.sort_values(['Sets Won', 'Game Difference'], ascending=[False, False], inplace=True)
 
-    # Prepare to assign points
+    # Reset indices to match the new sort order correctly
+    st.session_state.rankings.reset_index(drop=True, inplace=True)
+
+    # Points distribution for the tournament participants
     points_distribution = [10, 6, 4, 2] + [0] * (len(st.session_state.rankings) - 4)
-    rankings = st.session_state.rankings.reset_index(drop=True)
+    
+    # Track the last points awarded to handle ties
+    last_points_awarded = None
+    last_index = -1
 
-    # Handle ties and assign points
-    current_points = points_distribution[0]
-    skip_count = 0  # Tracks how many indices to skip due to ties
-
-    for i in range(len(rankings)):
-        if i > 0 and (rankings.at[i, 'Sets Won'] == rankings.at[i-1, 'Sets Won'] and
-                      rankings.at[i, 'Game Difference'] == rankings.at[i-1, 'Game Difference']):
-            rankings.at[i, 'Total Points'] += current_points
-            skip_count += 1
+    for i in range(len(st.session_state.rankings)):
+        if i == 0:
+            # First place
+            st.session_state.rankings.at[i, 'Total Points'] += points_distribution[i]
+            last_points_awarded = points_distribution[i]
+            last_index = i
         else:
-            if skip_count > 0:  # Adjust the index if there were ties
-                current_points = points_distribution[i-skip_count] if i-skip_count < len(points_distribution) else 0
-            rankings.at[i, 'Total Points'] += current_points
-            current_points = points_distribution[i+1] if i+1 < len(points_distribution) else 0
+            if (st.session_state.rankings.at[i, 'Sets Won'] == st.session_state.rankings.at[last_index, 'Sets Won'] and
+                st.session_state.rankings.at[i, 'Game Difference'] == st.session_state.rankings.at[last_index, 'Game Difference']):
+                # This player is tied with the previous player
+                st.session_state.rankings.at[i, 'Total Points'] += last_points_awarded
+            else:
+                # No tie, move to the next points slot
+                next_point_index = last_index + 1
+                if next_point_index < len(points_distribution):
+                    st.session_state.rankings.at[i, 'Total Points'] += points_distribution[next_point_index]
+                    last_points_awarded = points_distribution[next_point_index]
+                else:
+                    st.session_state.rankings.at[i, 'Total Points'] += 0  # No points left in distribution
+            last_index = i
 
-        rankings.at[i, 'Tournaments'] += 1
+        st.session_state.rankings.at[i, 'Tournaments'] += 1
 
-    # Update the main DataFrame
-    st.session_state.rankings = rankings
     save_rankings_to_csv()
-    st.experimental_rerun()
+    st.experimental_rerun()  # Refresh the app to update the displayed rankings
 
 
 def main():
