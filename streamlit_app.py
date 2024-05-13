@@ -82,17 +82,21 @@ tournament_results = enter_tournament_results()
 if tournament_results:
     record_results(tournament_results)
 
-# Display the current rank
-st.write("Current Rank:")
-st.write(rankings.sort_values("Points", ascending=False))
-
-# Plot the rank
 # Plot the rank
 st.write("Rank over time:")
 fig, ax = plt.subplots()
-for i in range(4):
-    player_points = [rankings_df.loc[rankings_df["Player"] == players[i], "Points"].values[0] for _ in range(len(tournaments))]
+for i in range(len(players)):
+    player_points = []
+    for tournament_index in range(len(tournaments)):
+        # Use a safer way to access points to avoid IndexError
+        points_array = rankings_df.loc[rankings_df["Player"] == players[i], "Points"].values
+        if points_array.size > 0:
+            player_points.append(points_array[0])
+        else:
+            player_points.append(0)  # Default to 0 if no points are found
+
     ax.plot(range(len(tournaments)), player_points, label=players[i])
+
 ax.set_xlabel("Tournament")
 ax.set_ylabel("Points")
 ax.set_title("Rank over time")
