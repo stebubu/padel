@@ -115,6 +115,7 @@ def main():
     # Provide download link for Excel file
     get_excel_download_link(st.session_state.rankings)
 
+
 if __name__ == "__main__":
     main()
 
