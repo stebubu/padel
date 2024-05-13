@@ -42,7 +42,8 @@ def finalize_rankings():
     points_distribution = [10, 6, 4, 2]  # Points for 1st, 2nd, 3rd, and 4th
     for idx, points in zip(st.session_state.rankings.index, points_distribution):
         st.session_state.rankings.loc[idx, 'Total Points'] += points
-        st.session_state.rankings.loc[idx, 'Tournaments'] += 1
+    # Increment tournaments count for all players
+    st.session_state.rankings['Tournaments'] += 1
     st.session_state.rankings.drop(columns=['Game Difference'], inplace=True)
     st.experimental_rerun()
 
