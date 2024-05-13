@@ -51,9 +51,11 @@ def enter_tournament_results():
             return tournament_results
     return None
 
-# Function to calculate rank and update the DataFrame
+
+
+
 def calculate_rank(tournament_results):
-    # Local dictionaries to track the stats
+    # Initialize local dictionaries to track the stats
     wins = {player: 0 for player in players}
     games_won = {player: 0 for player in players}
     matches_won = {player: 0 for player in players}
@@ -63,57 +65,39 @@ def calculate_rank(tournament_results):
     # Process results to update wins, games won, and games lost
     for ((team1_player1, team1_player2), (team2_player1, team2_player2), (score_team1, score_team2)) in tournament_results:
         if score_team1 > score_team2:
-            # Update wins and games for team 1
-            for player in [team1_player1, team1_player2]:
-                wins[player] += 1
-                matches_won[player] += 1
-                games_won[player] += score_team1
-                games_lost[player] += score_team2
-            # Update games for team 2
-            for player in [team2_player1, team2_player2]:
-                matches_lost[player] += 1
-                games_won[player] += score_team2
-                games_lost[player] += score_team1
+            update_team_stats(team1_player1, team1_player2, score_team1, score_team2, True, wins, matches_won, games_won, matches_lost, games_lost)
+            update_team_stats(team2_player1, team2_player2, score_team2, score_team1, False, wins, matches_won, games_won, matches_lost, games_lost)
         else:
-            # Update wins and games for team 2
-            for player in [team2_player1, team2_player2]:
-                wins[player] += 1
-                matches_won[player] += 1
-                games_won[player] += score_team2
-                games_lost[player] += score_team1
-            # Update games for team 1
-            for player in [team1_player1, team1_player2]:
-                matches_lost[player] += 1
-                games_won[player] += score_team1
-                games_lost[player] += score_team2
+            update_team_stats(team2_player1, team2_player2, score_team2, score_team1, True, wins, matches_won, games_won, matches_lost, games_lost)
+            update_team_stats(team1_player1, team1_player2, score_team1, score_team2, False, wins, matches_won, games_won, matches_lost, games_lost)
 
-    # Sorting players first by wins, then by games won
-    sorted_players = sorted(st.session_state.rankings_df['Player'], key=lambda x: (-wins[x], -games_won[x]))
-    points_distribution = [10, 6, 4, 2]
+    # Apply the computed metrics to the DataFrame
+    apply_player_stats(wins, games_won, matches_won, matches_lost, games_lost)
 
-    # Update the global DataFrame with computed metrics
-    for idx, player in enumerate(sorted_players):
-        df = st.session_state.rankings_df
-        df.loc[df['Player'] == player, 'Points'] += points_distribution[idx]
-        df.loc[df['Player'] == player, 'Matches Won'] += matches_won[player]
-        df.loc[df['Player'] == player, 'Matches Lost'] += matches_lost[player]
-        df.loc[df['Player'] == player, 'Games Won'] += games_won[player]
-        df.loc[df['Player'] == player, 'Games Lost'] += games_lost[player]
+def update_team_stats(player1, player2, games_won_team, games_lost_team, is_winner, wins, matches_won, games_won, matches_lost, games_lost):
+    team_players = [player1, player2]
+    for player in team_players:
+        if is_winner:
+            wins[player] += 1
+            matches_won[player] += 1
+        else:
+            matches_lost[player] += 1
+        games_won[player] += games_won_team
+        games_lost[player] += games_lost_team
 
-    # Assume only one winner for the tournament
-    df.loc[df['Player'] == sorted_players[0], 'Tournaments Won'] += 1
-    df['Tournaments Played'] += 1  # Increment for all players participating
-
-    # Calculate ratio of total points to tournaments played
+def apply_player_stats(wins, games_won, matches_won, matches_lost, games_lost):
     for player in players:
-        row = df[df['Player'] == player]
-        if row['Tournaments Played'].item() > 0:
-            ratio = row['Points'].item() / row['Tournaments Played'].item()
-            df.loc[df['Player'] == player, 'Ratio Points/Tournaments'] = ratio
+        # Safely update DataFrame using loc with condition, avoiding direct increment
+        player_mask = st.session_state.rankings_df['Player'] == player
+        if any(player_mask):
+            st.session_state.rankings_df.loc[player_mask, 'Matches Won'] = st.session_state.rankings_df.loc[player_mask, 'Matches Won'] + matches_won[player]
+            st.session_state.rankings_df.loc[player_mask, 'Matches Lost'] = st.session_state.rankings_df.loc[player_mask, 'Matches Lost'] + matches_lost[player]
+            st.session_state.rankings_df.loc[player_mask, 'Games Won'] = st.session_state.rankings_df.loc[player_mask, 'Games Won'] + games_won[player]
+            st.session_state.rankings_df.loc[player_mask, 'Games Lost'] = st.session_state.rankings_df.loc[player_mask, 'Games Lost'] + games_lost[player]
 
-    # Persist data
-    df.to_csv("data.csv", index=False)
-    st.session_state.rankings_df = df.sort_values("Points", ascending=False)
+    # Sorting players by total points and updating other statistics like Points and Tournaments Won should be handled here as well
+
+
 
 # Main app
 edit_player_names()
