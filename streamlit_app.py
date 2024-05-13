@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os
+from io import BytesIO
 
 # Path to the CSV file
 csv_file_path = 'tournament_rankings.csv'
