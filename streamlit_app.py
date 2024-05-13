@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-from itertools import combinations
 
 # Initial setup: Define the base DataFrame for rankings
 if 'rankings' not in st.session_state:
@@ -26,26 +25,32 @@ def update_ranking(player_name, points, games_won, games_lost):
         st.session_state.rankings = pd.concat([st.session_state.rankings, new_data], ignore_index=True)
 
 def main():
-    st.title('Tournament Tracker')
+    st.title('Tennis Doubles Tournament Tracker')
 
     # Step 1: Register Players
     with st.form("player_registration"):
         players = [st.text_input(f"Player {i+1} Name:") for i in range(4)]
         submitted = st.form_submit_button("Register Players and Generate Matches")
         if submitted and all(players):
-            # Generate all unique match pairings
-            matches = list(combinations(players, 2))
+            # Generate all unique doubles matches
+            matches = [
+                (f"{players[0]}/{players[1]}", f"{players[2]}/{players[3]}"),
+                (f"{players[0]}/{players[2]}", f"{players[1]}/{players[3]}"),
+                (f"{players[0]}/{players[3]}", f"{players[1]}/{players[2]}")
+            ]
             st.session_state.matches = matches
             st.session_state.results = {match: {} for match in matches}
-            st.success("All possible matches generated!")
+            st.success("All doubles matches generated!")
 
     # Step 2: Collect Match Results
     if 'matches' in st.session_state:
         for match in st.session_state.matches:
             with st.form(f"match_{match[0]}_{match[1]}_results"):
                 st.write(f"Match: {match[0]} vs {match[1]}")
-                games_won = {match[0]: st.number_input(f"Games won by {match[0]}", min_value=0, max_value=12, step=1, key=f"games_{match[0]}"),
-                             match[1]: st.number_input(f"Games won by {match[1]}", min_value=0, max_value=12, step=1, key=f"games_{match[1]}")}
+                games_won = {
+                    match[0]: st.number_input(f"Games won by Team {match[0]}", min_value=0, max_value=12, step=1, key=f"games_{match[0]}"),
+                    match[1]: st.number_input(f"Games won by Team {match[1]}", min_value=0, max_value=12, step=1, key=f"games_{match[1]}")
+                }
                 result_submitted = st.form_submit_button("Submit Result")
                 if result_submitted:
                     st.session_state.results[match] = games_won
@@ -55,12 +60,17 @@ def main():
     if st.button("Update Rankings"):
         for match, games in st.session_state.results.items():
             if games:
-                winner = match[0] if games[match[0]] > games[match[1]] else match[1]
-                loser = match[0] if winner == match[1] else match[1]
-                winner_points = 10 if games[winner] > games[loser] else 0
+                team1, team2 = match
+                players_team1 = team1.split('/')
+                players_team2 = team2.split('/')
+                winner_team = team1 if games[team1] > games[team2] else team2
+                loser_team = team1 if winner_team == team2 else team2
+                winner_points = 10 if games[winner_team] > games[loser_team] else 0
                 loser_points = 0
-                update_ranking(winner, winner_points, games[winner], games[loser])
-                update_ranking(loser, loser_points, games[loser], games[winner])
+                update_ranking(players_team1[0], winner_points, games[winner_team], games[loser_team])
+                update_ranking(players_team1[1], winner_points, games[winner_team], games[loser_team])
+                update_ranking(players_team2[0], loser_points, games[loser_team], games[winner_team])
+                update_ranking(players_team2[1], loser_points, games[loser_team], games[winner_team])
         st.write("Rankings updated successfully!")
 
     # Step 4: Display Rankings
