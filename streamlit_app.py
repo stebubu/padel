@@ -25,11 +25,13 @@ def enter_tournament_results():
         tournament_results = []
         for i in range(3):
             st.write(f"Match {i+1}:")
-            winner = st.selectbox("Winner", players, key=f"winner_{i}")
-            loser = st.selectbox("Loser", [p for p in players if p != winner], key=f"loser_{i}")
-            score_winner = st.number_input("Score Winner:", min_value=0, max_value=10, value=6)
-            score_loser = st.number_input("Score Loser:", min_value=0, max_value=10, value=4)
-            tournament_results.append(((winner, loser), (score_winner, score_loser)))
+            team1_player1 = st.selectbox("Team 1 Player 1", players, key=f"team1_player1_{i}")
+            team1_player2 = st.selectbox("Team 1 Player 2", [p for p in players if p != team1_player1], key=f"team1_player2_{i}")
+            team2_player1 = st.selectbox("Team 2 Player 1", [p for p in players if p not in [team1_player1, team1_player2]], key=f"team2_player1_{i}")
+            team2_player2 = st.selectbox("Team 2 Player 2", [p for p in players if p not in [team1_player1, team1_player2, team2_player1]], key=f"team2_player2_{i}")
+            score_team1 = st.number_input("Score Team 1:", min_value=0, max_value=10, value=6)
+            score_team2 = st.number_input("Score Team 2:", min_value=0, max_value=10, value=2)
+            tournament_results.append(((team1_player1, team1_player2), (team2_player1, team2_player2), (score_team1, score_team2)))
         submitted = st.form_submit_button("Submit")
         if submitted:
             return tournament_results
@@ -39,10 +41,17 @@ def enter_tournament_results():
 def calculate_rank(tournament_results):
     wins = {player: 0 for player in players}
     games_won = {player: 0 for player in players}
-    for ((winner, loser), (score_winner, score_loser)) in tournament_results:
-        wins[winner] += 1
-        games_won[winner] += score_winner
-        games_won[loser] += score_loser
+    for ((team1_player1, team1_player2), (team2_player1, team2_player2), (score_team1, score_team2)) in tournament_results:
+        if score_team1 > score_team2:
+            wins[team1_player1] += 1
+            wins[team1_player2] += 1
+        else:
+            wins[team2_player1] += 1
+            wins[team2_player2] += 1
+        games_won[team1_player1] += score_team1
+        games_won[team1_player2] += score_team1
+        games_won[team2_player1] += score_team2
+        games_won[team2_player2] += score_team2
     rankings = sorted(players, key=lambda x: (-wins[x], -games_won[x]))
     points = [10, 6, 4, 2]
     for i, player in enumerate(rankings):
