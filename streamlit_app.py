@@ -64,5 +64,5 @@ def main():
     st.write("Current Rankings:")
     st.table(st.session_state.rankings.sort_values('Total Points', ascending=False))
 
-if __name__ == "__main
-
+if __name__ == "__main__":
+    main()
