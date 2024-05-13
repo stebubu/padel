@@ -86,16 +86,19 @@ def update_team_stats(player1, player2, games_won_team, games_lost_team, is_winn
         games_lost[player] += games_lost_team
 
 def apply_player_stats(wins, games_won, matches_won, matches_lost, games_lost):
+    df = st.session_state.rankings_df  # Reference to the DataFrame
     for player in players:
-        # Ensure you're correctly referencing the DataFrame and the condition is valid.
-        player_mask = st.session_state.rankings_df['Player'] == player
-        if player_mask.any():  # Ensures there's at least one match, avoids empty slice operations.
-            # Safely update DataFrame by explicitly referencing existing indices and columns.
-            st.session_state.rankings_df.loc[player_mask, 'Matches Won'] += matches_won[player]
-            st.session_state.rankings_df.loc[player_mask, 'Matches Lost'] += matches_lost[player]
-            st.session_state.rankings_df.loc[player_mask, 'Games Won'] += games_won[player]
-            st.session_state.rankings_df.loc[player_mask, 'Games Lost'] += games_lost[player]
-
+        # Check if the player is in the DataFrame to avoid KeyErrors
+        if player in df['Player'].values:
+            player_mask = df['Player'] == player
+            # Update the DataFrame safely by using .loc with the existing mask
+            df.loc[player_mask, 'Matches Won'] = df.loc[player_mask, 'Matches Won'] + matches_won.get(player, 0)
+            df.loc[player_mask, 'Matches Lost'] = df.loc[player_mask, 'Matches Lost'] + matches_lost.get(player, 0)
+            df.loc[player_mask, 'Games Won'] = df.loc[player_mask, 'Games Won'] + games_won.get(player, 0)
+            df.loc[player_mask, 'Games Lost'] = df.loc[player_mask, 'Games Lost'] + games_lost.get(player, 0)
+    
+    # Make sure to assign the modified DataFrame back to the session state if necessary
+    st.session_state.rankings_df = df
 
 
 # Main app
