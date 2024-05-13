@@ -20,6 +20,7 @@ def edit_player_names():
     st.write("Players:", players)
 
 # Function to enter the results of a tournament
+
 def enter_tournament_results():
     with st.form("tournament_results"):
         tournament_results = []
@@ -29,8 +30,8 @@ def enter_tournament_results():
             team1_player2 = st.selectbox("Team 1 Player 2", [p for p in players if p != team1_player1], key=f"team1_player2_{i}")
             team2_player1 = st.selectbox("Team 2 Player 1", [p for p in players if p not in [team1_player1, team1_player2]], key=f"team2_player1_{i}")
             team2_player2 = st.selectbox("Team 2 Player 2", [p for p in players if p not in [team1_player1, team1_player2, team2_player1]], key=f"team2_player2_{i}")
-            score_team1 = st.number_input("Score Team 1:", min_value=0, max_value=10, value=6)
-            score_team2 = st.number_input("Score Team 2:", min_value=0, max_value=10, value=2)
+            score_team1 = st.number_input("Score Team 1:", min_value=0, max_value=10, value=6, key=f"score_team1_{i}")
+            score_team2 = st.number_input("Score Team 2:", min_value=0, max_value=10, value=2, key=f"score_team2_{i}")
             tournament_results.append(((team1_player1, team1_player2), (team2_player1, team2_player2), (score_team1, score_team2)))
         submitted = st.form_submit_button("Submit")
         if submitted:
