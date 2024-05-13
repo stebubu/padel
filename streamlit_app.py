@@ -61,7 +61,7 @@ def calculate_rank(tournament_results):
     points = [10, 6, 4, 2]
     for i, player in enumerate(rankings):
         idx = rankings.index(player)
-        rankings_df.loc[idx, 'Points'] += points[i]
+        rankings_df.loc[rankings_df['Player'] == player, 'Points'] += points[i]
 
 # Function to record the results and update the rank
 def record_results(tournament_results):
