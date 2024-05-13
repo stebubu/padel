@@ -1,28 +1,38 @@
 import streamlit as st
 import pandas as pd
 
-# Initial setup: Define the base DataFrame for rankings
+# Initialize the DataFrame for rankings if it doesn't exist
 if 'rankings' not in st.session_state:
-    st.session_state.rankings = pd.DataFrame(columns=['Player', 'Total Points', 'Tournaments', 'Games Won', 'Games Lost'])
+    st.session_state.rankings = pd.DataFrame(columns=['Player', 'Total Points', 'Tournaments', 'Sets Won', 'Games Won', 'Games Lost'])
 
-# Helper function to update ranking
-def update_ranking(player_name, points, games_won, games_lost):
+# Helper function to update ranking based on each match
+def update_games(player_name, games_won, games_lost):
     if player_name in st.session_state.rankings['Player'].values:
         player_data = st.session_state.rankings[st.session_state.rankings['Player'] == player_name]
         idx = player_data.index[0]
-        st.session_state.rankings.loc[idx, 'Total Points'] += points
-        st.session_state.rankings.loc[idx, 'Tournaments'] += 1
         st.session_state.rankings.loc[idx, 'Games Won'] += games_won
         st.session_state.rankings.loc[idx, 'Games Lost'] += games_lost
     else:
         new_data = pd.DataFrame({
             'Player': [player_name],
-            'Total Points': [points],
-            'Tournaments': [1],
+            'Total Points': [0],
+            'Tournaments': [0],
+            'Sets Won': [0],
             'Games Won': [games_won],
             'Games Lost': [games_lost]
         })
         st.session_state.rankings = pd.concat([st.session_state.rankings, new_data], ignore_index=True)
+
+# Helper function to finalize rankings after a tournament
+def finalize_rankings():
+    # Sorting by Sets Won and then by game difference
+    st.session_state.rankings['Game Difference'] = st.session_state.rankings['Games Won'] - st.session_state.rankings['Games Lost']
+    st.session_state.rankings.sort_values(['Sets Won', 'Game Difference'], ascending=[False, False], inplace=True)
+    points_distribution = [10, 6, 4, 2]  # Points for 1st, 2nd, 3rd, and 4th
+    for idx, points in zip(st.session_state.rankings.index, points_distribution):
+        st.session_state.rankings.loc[idx, 'Total Points'] += points
+        st.session_state.rankings.loc[idx, 'Tournaments'] += 1
+    st.session_state.rankings.drop(columns=['Game Difference'], inplace=True)
 
 def main():
     st.title('Tennis Doubles Tournament Tracker')
@@ -54,23 +64,15 @@ def main():
                 result_submitted = st.form_submit_button("Submit Result")
                 if result_submitted:
                     st.session_state.results[match] = games_won
+                    for team, games in games_won.items():
+                        players_team = team.split('/')
+                        for player in players_team:
+                            update_games(player, games, 0 if games == 12 else 12-games)
                     st.success(f"Results recorded for {match[0]} vs {match[1]}")
 
     # Step 3: Update Rankings
-    if st.button("Update Rankings"):
-        for match, games in st.session_state.results.items():
-            if games:
-                team1, team2 = match
-                players_team1 = team1.split('/')
-                players_team2 = team2.split('/')
-                winner_team = team1 if games[team1] > games[team2] else team2
-                loser_team = team1 if winner_team == team2 else team2
-                winner_points = 10 if games[winner_team] > games[loser_team] else 0
-                loser_points = 0
-                update_ranking(players_team1[0], winner_points, games[winner_team], games[loser_team])
-                update_ranking(players_team1[1], winner_points, games[winner_team], games[loser_team])
-                update_ranking(players_team2[0], loser_points, games[loser_team], games[winner_team])
-                update_ranking(players_team2[1], loser_points, games[loser_team], games[winner_team])
+    if st.button("Finalize Tournament"):
+        finalize_rankings()
         st.write("Rankings updated successfully!")
 
     # Step 4: Display Rankings
@@ -79,4 +81,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
