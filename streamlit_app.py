@@ -38,14 +38,20 @@ def update_individual_stats(player_name, games_won, games_lost, set_win):
 # Helper function to finalize rankings after a tournament
 def finalize_rankings():
     st.session_state.rankings['Game Difference'] = st.session_state.rankings['Games Won'] - st.session_state.rankings['Games Lost']
-    st.session_state.rankings.sort_values(['Sets Won', 'Game Difference'], ascending=[False, False], inplace=True)
+    sorted_rankings = st.session_state.rankings.sort_values(['Sets Won', 'Game Difference'], ascending=[False, False])
+    sorted_rankings.reset_index(drop=True, inplace=True)  # Reset index to sort players correctly by rank
+
     points_distribution = [10, 6, 4, 2]  # Points for 1st, 2nd, 3rd, and 4th
-    for idx, points in zip(st.session_state.rankings.index, points_distribution):
-        st.session_state.rankings.loc[idx, 'Total Points'] += points
-    # Increment tournaments count for all players
-    st.session_state.rankings['Tournaments'] += 1
-    st.session_state.rankings.drop(columns=['Game Difference'], inplace=True)
-    st.experimental_rerun()
+    for idx in range(len(sorted_rankings)):
+        if idx < len(points_distribution):  # Ensure we don't go out of bounds
+            sorted_rankings.loc[idx, 'Total Points'] += points_distribution[idx]
+            sorted_rankings.loc[idx, 'Tournaments'] += 1  # Increment tournaments count for all participating players
+
+    # Update the main DataFrame
+    st.session_state.rankings = sorted_rankings
+    st.session_state.rankings.drop(columns=['Game Difference'], inplace=True)  # Clean up the DataFrame
+
+    st.experimental_rerun()  # Refresh to show updated data
 
 def main():
     st.title('Tennis Doubles Tournament Tracker')
