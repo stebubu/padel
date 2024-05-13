@@ -1,11 +1,5 @@
 import streamlit as st
 import pandas as pd
-import os
-import itertools
-
-
-import streamlit as st
-import pandas as pd
 
 # Initial setup: Define the base DataFrame for rankings
 if 'rankings' not in st.session_state:
@@ -71,5 +65,4 @@ def main():
     st.table(st.session_state.rankings.sort_values('Total Points', ascending=False))
 
 if __name__ == "__main
-
 
