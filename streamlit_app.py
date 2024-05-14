@@ -178,21 +178,7 @@ def main():
         reset_rankings()
     
     
-    st.title("Editable Ranking Table")
-    if 'rankings' not in st.session_state:
-        st.session_state.rankings = rankings
 
-    # Display editable DataFrame
-    st.session_state.rankings = editable_dataframe(st.session_state.rankings)
-
-    # Button to save the updates
-    if st.button('Save Updates'):
-        st.session_state.rankings.to_csv(csv_file_path, index=False)
-        st.success('Rankings updated and saved successfully!')
-
-    # Displaying the updated DataFrame
-    st.write("Updated Rankings:")
-    st.dataframe(st.session_state.rankings)
 
 if __name__ == "__main__":
     main()
