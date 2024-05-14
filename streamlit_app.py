@@ -13,9 +13,32 @@ if os.path.exists(csv_file_path):
 else:
     st.session_state.rankings = pd.DataFrame(columns=['Player', 'Total Points', 'Tournaments', 'Sets Won', 'Games Won', 'Games Lost'])
 
+
+
 # Function to save rankings to CSV
 def save_rankings_to_csv():
     st.session_state.rankings.to_csv(csv_file_path, index=False)
+
+
+# Function to display editable DataFrame
+def editable_dataframe(df):
+    # Create a list of text inputs for each element in the DataFrame
+    updated_data = []
+    for i in range(len(df)):
+        row_data = []
+        for col in df.columns:
+            new_val = st.text_input(f"{col} {i}", df.at[i, col])
+            try:
+                if col in ['Total Points', 'Tournaments', 'Sets Won', 'Games Won', 'Games Lost']:  # Assuming these should be integers
+                    new_val = int(new_val)
+                row_data.append(new_val)
+            except ValueError:
+                st.error('Please enter a valid integer')
+                row_data.append(df.at[i, col])  # Revert to original data on error
+        updated_data.append(row_data)
+    # Update the DataFrame with new data
+    new_df = pd.DataFrame(updated_data, columns=df.columns)
+    return new_df
 
 # Function to reset the rankings
 def reset_rankings():
@@ -153,7 +176,23 @@ def main():
     # Placement for the reset button
     if st.button('Reset Rankings'):
         reset_rankings()
+    
+    
+    st.title("Editable Ranking Table")
+    if 'rankings' not in st.session_state:
+        st.session_state.rankings = rankings
 
+    # Display editable DataFrame
+    st.session_state.rankings = editable_dataframe(st.session_state.rankings)
+
+    # Button to save the updates
+    if st.button('Save Updates'):
+        st.session_state.rankings.to_csv(csv_file_path, index=False)
+        st.success('Rankings updated and saved successfully!')
+
+    # Displaying the updated DataFrame
+    st.write("Updated Rankings:")
+    st.dataframe(st.session_state.rankings)
 
 if __name__ == "__main__":
     main()
