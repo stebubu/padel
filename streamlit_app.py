@@ -68,47 +68,40 @@ def update_individual_stats(player_name, games_won, games_lost, set_win):
         st.session_state.rankings = pd.concat([st.session_state.rankings, new_data], ignore_index=True)
     save_rankings_to_csv()
 
-def finalize_rankings():
-    # Calculate game difference for sorting and resolving ties
-    st.session_state.rankings['Game Difference'] = st.session_state.rankings['Games Won'] - st.session_state.rankings['Games Lost']
-    st.session_state.rankings.sort_values(['Sets Won', 'Game Difference'], ascending=[False, False], inplace=True)
 
-    # Reset indices to match the new sort order correctly
-    st.session_state.rankings.reset_index(drop=True, inplace=True)
+def finalize_rankings(tournament_players):
+    # Filter the DataFrame to only include players who participated in the current tournament
+    tournament_rankings = st.session_state.rankings[st.session_state.rankings['Player'].isin(tournament_players)]
 
-    # Points distribution for the tournament participants
-    points_distribution = [10, 6, 4, 2] + [0] * (len(st.session_state.rankings) - 4)
-    
-    # Track the last points awarded to handle ties
+    # Sort these players by sets won and game difference
+    tournament_rankings['Game Difference'] = tournament_rankings['Games Won'] - tournament_rankings['Games Lost']
+    tournament_rankings.sort_values(['Sets Won', 'Game Difference'], ascending=[False, False], inplace=True)
+
+    # Assign points based on tournament rankings
+    points_distribution = [10, 6, 4, 2] + [0] * (len(tournament_rankings) - 4)
     last_points_awarded = None
     last_index = -1
 
-    for i in range(len(st.session_state.rankings)):
-        if i == 0:
-            # First place
-            st.session_state.rankings.at[i, 'Total Points'] += points_distribution[i]
-            last_points_awarded = points_distribution[i]
-            last_index = i
+    for i in range(len(tournament_rankings)):
+        if i == 0 or (tournament_rankings.iloc[i]['Sets Won'] != tournament_rankings.iloc[last_index]['Sets Won'] or
+                      tournament_rankings.iloc[i]['Game Difference'] != tournament_rankings.iloc[last_index]['Game Difference']):
+            # Assign next set of points
+            points_to_assign = points_distribution[i]
         else:
-            if (st.session_state.rankings.at[i, 'Sets Won'] == st.session_state.rankings.at[last_index, 'Sets Won'] and
-                st.session_state.rankings.at[i, 'Game Difference'] == st.session_state.rankings.at[last_index, 'Game Difference']):
-                # This player is tied with the previous player
-                st.session_state.rankings.at[i, 'Total Points'] += last_points_awarded
-            else:
-                # No tie, move to the next points slot
-                next_point_index = last_index + 1
-                if next_point_index < len(points_distribution):
-                    st.session_state.rankings.at[i, 'Total Points'] += points_distribution[next_point_index]
-                    last_points_awarded = points_distribution[next_point_index]
-                else:
-                    st.session_state.rankings.at[i, 'Total Points'] += 0  # No points left in distribution
-            last_index = i
+            # Tie, assign the same as last assigned
+            points_to_assign = last_points_awarded
 
-        st.session_state.rankings.at[i, 'Tournaments'] += 1
+        # Update points
+        player_index = st.session_state.rankings[st.session_state.rankings['Player'] == tournament_rankings.iloc[i]['Player']].index
+        st.session_state.rankings.at[player_index, 'Total Points'] += points_to_assign
+        st.session_state.rankings.at[player_index, 'Tournaments'] += 1
 
+        last_points_awarded = points_to_assign
+        last_index = i
+
+    # Save the updated rankings to CSV
     save_rankings_to_csv()
-    st.experimental_rerun()  # Refresh the app to update the displayed rankings
-
+    st.experimental_rerun()
 
 def main():
     st.title('CIRCOLO PADEL RIMINI - MERCOLEDI DA LEONI')
