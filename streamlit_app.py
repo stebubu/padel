@@ -70,38 +70,38 @@ def update_individual_stats(player_name, games_won, games_lost, set_win):
 
 
 def finalize_rankings(tournament_players):
-    # Filter the DataFrame to only include players who participated in the current tournament
-    tournament_rankings = st.session_state.rankings[st.session_state.rankings['Player'].isin(tournament_players)]
+    if 'rankings' in st.session_state and not st.session_state.rankings.empty:
+        # Filter the DataFrame to include only players from the current tournament
+        tournament_rankings = st.session_state.rankings[st.session_state.rankings['Player'].isin(tournament_players)].copy()
 
-    # Sort these players by sets won and game difference
-    tournament_rankings['Game Difference'] = tournament_rankings['Games Won'] - tournament_rankings['Games Lost']
-    tournament_rankings.sort_values(['Sets Won', 'Game Difference'], ascending=[False, False], inplace=True)
+        # Calculate game difference for sorting and resolving ties
+        tournament_rankings['Game Difference'] = tournament_rankings['Games Won'] - tournament_rankings['Games Lost']
+        tournament_rankings.sort_values(['Sets Won', 'Game Difference'], ascending=[False, False], inplace=True)
 
-    # Assign points based on tournament rankings
-    points_distribution = [10, 6, 4, 2] + [0] * (len(tournament_rankings) - 4)
-    last_points_awarded = None
-    last_index = -1
+        # Assign points based on tournament rankings
+        points_distribution = [10, 6, 4, 2] + [0] * (len(tournament_rankings) - 4)
+        last_points_awarded = None
+        last_index = 0
 
-    for i in range(len(tournament_rankings)):
-        if i == 0 or (tournament_rankings.iloc[i]['Sets Won'] != tournament_rankings.iloc[last_index]['Sets Won'] or
-                      tournament_rankings.iloc[i]['Game Difference'] != tournament_rankings.iloc[last_index]['Game Difference']):
-            # Assign next set of points
-            points_to_assign = points_distribution[i]
-        else:
-            # Tie, assign the same as last assigned
-            points_to_assign = last_points_awarded
+        for i in range(len(tournament_rankings)):
+            if i == 0 or (tournament_rankings.iloc[i]['Sets Won'] != tournament_rankings.iloc[i-1]['Sets Won'] or
+                          tournament_rankings.iloc[i]['Game Difference'] != tournament_rankings.iloc[i-1]['Game Difference']):
+                # Assign points from the distribution
+                points_to_assign = points_distribution[min(i, len(points_distribution)-1)]
+            else:
+                # Tie, assign the same as last assigned
+                points_to_assign = last_points_awarded
 
-        # Update points
-        player_index = st.session_state.rankings[st.session_state.rankings['Player'] == tournament_rankings.iloc[i]['Player']].index
-        st.session_state.rankings.at[player_index, 'Total Points'] += points_to_assign
-        st.session_state.rankings.at[player_index, 'Tournaments'] += 1
+            # Update the main DataFrame
+            player_name = tournament_rankings.iloc[i]['Player']
+            player_index = st.session_state.rankings[st.session_state.rankings['Player'] == player_name].index
+            st.session_state.rankings.loc[player_index, 'Total Points'] += points_to_assign
+            st.session_state.rankings.loc[player_index, 'Tournaments'] += 1
 
-        last_points_awarded = points_to_assign
-        last_index = i
+            last_points_awarded = points_to_assign
 
-    # Save the updated rankings to CSV
-    save_rankings_to_csv()
-    st.experimental_rerun()
+        # Save updates and remove temporary columns
+        save_rankings_to_csv()
 
 def main():
     st.title('CIRCOLO PADEL RIMINI - MERCOLEDI DA LEONI')
@@ -139,7 +139,9 @@ def main():
                     st.success(f"Results recorded for {match[0]} vs {match[1]}")
 
     if st.button("AGGIORNA TAPPA"):
-        finalize_rankings()
+        tournament_players = [players[0],players[1],players[2],players[3]]  # Example list
+        finalize_rankings(tournament_players)
+
 
     st.write("Current Rankings:")
     st.table(st.session_state.rankings.sort_values('Total Points', ascending=False))
